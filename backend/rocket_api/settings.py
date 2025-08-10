@@ -1,6 +1,7 @@
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+ROOT_URLCONF = "rocket_api.urls"
 
 # Installed apps (yours are fine)
 INSTALLED_APPS = [
@@ -24,6 +25,9 @@ INSTALLED_APPS = [
     "profiles.apps.ProfilesConfig",  # <- use the AppConfig so signals load once
     "matching",
     "projects",
+    "connections",
+    "interactions",
+    "graphsvc",
 ]
 
 MIDDLEWARE = [

@@ -23,5 +23,7 @@ urlpatterns = [
     path("api/profiles/", include("profiles.urls")),
     path("api/projects/", include("projects.urls")),
     path("api/matching/", include("matching.urls")),
+    path("api/recs/", include("graphsvc.urls")),  # if you added the recs app
 ]
+
 
