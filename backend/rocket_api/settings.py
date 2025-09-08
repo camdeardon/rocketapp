@@ -1,9 +1,11 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_URLCONF = "rocket_api.urls"
+DEBUG = True
+ALLOWED_HOSTS = []
 
-# Installed apps (yours are fine)
 INSTALLED_APPS = [
     # Core
     "django.contrib.admin",
@@ -20,18 +22,20 @@ INSTALLED_APPS = [
     "djoser",
     "pgvector.django",
 
-    # Local
+    # Local  (pick **one** of “matching” or “matcher”; don’t keep both)
     "accounts",
-    "profiles.apps.ProfilesConfig",  # <- use the AppConfig so signals load once
-    "matching",
+    "profiles",         # use AppConfig if you need signals: "profiles.apps.ProfilesConfig"
+    "matching",         # or "matcher" if that’s the app you created
     "projects",
     "connections",
     "interactions",
     "graphsvc",
 ]
 
+# CORS: middleware must be as high as possible, before CommonMiddleware
+# (see docs). Do NOT prepend to an undefined MIDDLEWARE variable.
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",   # <— first (or near-top)
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -40,6 +44,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -55,34 +60,53 @@ TEMPLATES = [
         },
     },
 ]
-DEBUG = True
-ALLOWED_HOSTS = []
-STATIC_URL = "/static/"       # <-- leading + trailing slash
-STATICFILES_DIRS = [BASE_DIR / "static"]  # optional: where your app-level assets live
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
+# --- Auth / DRF ---
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
+    "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
-    ],
+    ),
 }
 AUTH_USER_MODEL = "accounts.User"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",  # BASE_DIR is /backend
-    }
+# (Optional) Djoser tweaks
+DJOSER = {
+    "LOGIN_FIELD": "email",   # if you want email login; requires appropriate backend
 }
-# For dev: either allow all OR specify origins (don’t do both).
-# If you want explicit origins, comment out CORS_ALLOW_ALL_ORIGINS.
-CORS_ALLOW_ALL_ORIGINS = True  # DEV ONLY. Remove in prod.
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+
+# --- DB ---
+# Use Postgres when env vars are present; otherwise sqlite for quick dev.
+if os.getenv("DB_NAME"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME"),
+            "USER": os.getenv("DB_USER", "postgres"),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+            "CONN_MAX_AGE": 60,
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+# --- Static / Media ---
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# --- CORS (pick ONE strategy: allow-all for dev OR an explicit list) ---
+CORS_ALLOW_ALL_ORIGINS = True     # DEV ONLY; remove in prod
+# If you prefer explicit:
+# CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 CORS_ALLOW_CREDENTIALS = True
